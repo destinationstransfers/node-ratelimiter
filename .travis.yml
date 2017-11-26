@@ -1,13 +1,14 @@
 language: node_js
 node_js:
-  - "0.10"
-  - "0.12"
-  - "4"
-  - "6"
+  - "8"
+  - "stable"
+
 services:
   - redis-server
+
 install:
-- npm install
+  - yarn install --pure-lockfile
+
 script:
-- make test
+  - node node_modules/.bin/jest --coverage --bail --noStackTrace --maxWorkers=1 --forceExit
 
