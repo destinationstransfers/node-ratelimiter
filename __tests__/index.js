@@ -34,11 +34,10 @@ process.on('unhandledRejection', up => {
       it('should represent the total limit per reset period', async () => {
         const limit = new Limiter({
           max: 5,
-          id: 'something',
           db,
         });
 
-        const res = await limit.get();
+        const res = await limit.get('something');
         expect(res).toHaveProperty('total', 5);
       });
     });
@@ -48,17 +47,16 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           max: 5,
           duration: 100000,
-          id: 'something',
           db,
         });
 
-        let res = await limit.get();
+        let res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 5);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 4);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 3);
       });
     });
@@ -68,11 +66,10 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           max: 5,
           duration: 60000,
-          id: 'something',
           db,
         });
 
-        const res = await limit.get();
+        const res = await limit.get('something');
         const left = res.reset - Date.now() / 1000;
         expect(left).toBeLessThan(60);
         expect(left).toBeGreaterThan(0);
@@ -83,20 +80,19 @@ process.on('unhandledRejection', up => {
       it('should retain .remaining at 0', async () => {
         const limit = new Limiter({
           max: 2,
-          id: 'something',
           db,
         });
 
-        let res = await limit.get();
+        let res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 2);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 1);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 0);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 0);
       });
     });
@@ -106,17 +102,16 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           duration: 2000,
           max: 2,
-          id: 'something',
           db,
         });
 
-        let res = await limit.get();
+        let res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 2);
 
         // waiting 3000 ms
         await new Promise(resolve => setTimeout(resolve, 3000));
         // calling again
-        res = await limit.get();
+        res = await limit.get('something');
         const left = res.reset - Date.now() / 1000;
         expect(left).toBeLessThan(2);
         expect(res).toHaveProperty('remaining', 2);
@@ -128,14 +123,13 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           duration: 10000,
           max: 2,
-          id: 'something',
           db,
         });
 
-        let res = await limit.get();
+        let res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 2);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 1);
       });
 
@@ -143,11 +137,10 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           duration: 10000,
           max: 2,
-          id: 'something',
           db,
         });
 
-        await limit.get();
+        await limit.get('something');
 
         const res = await new Promise((resolve, reject) =>
           db
@@ -173,7 +166,6 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           duration: 10000,
           max: 2,
-          id: 'something',
           db,
         });
 
@@ -188,13 +180,13 @@ process.on('unhandledRejection', up => {
             },
           ),
         );
-        let res = await limit.get();
+        let res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 2);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 1);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 0);
       });
     });
@@ -210,7 +202,6 @@ process.on('unhandledRejection', up => {
           new Limiter({
             duration: 10000,
             max,
-            id: 'something',
             db: redisModule.createClient(),
           }),
         );
@@ -218,11 +209,13 @@ process.on('unhandledRejection', up => {
 
       it('should prevent race condition and properly set the expected value', async () => {
         // Warm up and prepare the data.
-        const res0 = await limits[0].get();
+        const res0 = await limits[0].get('something');
         expect(res0).toHaveProperty('remaining', left--);
 
         // Simulate multiple concurrent requests.
-        const responses = await Promise.all(limits.map(limit => limit.get()));
+        const responses = await Promise.all(
+          limits.map(limit => limit.get('something')),
+        );
 
         expect(responses).toHaveLength(clientsCount);
         // If there were any errors, report.
@@ -244,17 +237,16 @@ process.on('unhandledRejection', up => {
       const limiter = new Limiter({
         duration: 10000,
         max,
-        id: 'asyncsomething',
         db: redisModule.createClient(),
       });
 
       it('should set the count properly without race conditions', async () => {
         const limits = await Promise.all([
-          limiter.get(),
-          limiter.get(),
-          limiter.get(),
-          limiter.get(),
-          limiter.get(),
+          limiter.get('asyncsomething'),
+          limiter.get('asyncsomething'),
+          limiter.get('asyncsomething'),
+          limiter.get('asyncsomething'),
+          limiter.get('asyncsomething'),
         ]);
 
         limits.forEach(l => expect(l).toHaveProperty('remaining', max--));

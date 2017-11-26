@@ -14,17 +14,16 @@ const microtime = require('./microtime');
  *  - `db` redis connection instance
  *
  * @param {Object} opts
+ * @param {RedisClient} opts.db - require instance of Redis client
  * @api public
  */
 class Limiter {
-  constructor({ id, db, max = 2500, duration = 3600000 }) {
-    this.id = id;
+  constructor({ db, max = 2500, duration = 3600000 }) {
+    /** @type {RedisClient} */
     this.db = db;
-    assert(this.id, '.id required');
     assert(this.db, '.db required');
     this.max = max;
     this.duration = duration;
-    this.key = `limit:${this.id}`;
   }
 
   /**
@@ -34,14 +33,18 @@ class Limiter {
    * that expire after N milliseconds:
    *  - limit:<id>
    *
+   * @param {string} id - id of client we are limit checking
    * @returns {Promise.<{remaining: number, reset: number, total: number}>}
    */
-  get() {
-    const { db, duration, key, max } = this;
+  async get(id) {
+    assert(typeof id === 'string', 'id must be a string');
+    const key = `limit:${id}`;
+
+    const { db, duration, max } = this;
     const now = microtime.now();
     const start = now - duration * 1000;
 
-    return new Promise((resolve, reject) => {
+    const res = await new Promise((resolve, reject) => {
       db
         .multi()
         .zremrangebyscore([key, 0, start])
@@ -49,25 +52,16 @@ class Limiter {
         .zadd([key, now, now])
         .zrange([key, 0, 0])
         .pexpire([key, duration])
-        .exec((err, res) => {
-          if (err) return reject(err);
-
-          const count = parseInt(
-            Array.isArray(res[0]) ? res[1][1] : res[1],
-            10,
-          );
-          const oldest = parseInt(
-            Array.isArray(res[0]) ? res[3][1] : res[3],
-            10,
-          );
-
-          return resolve({
-            remaining: count < max ? max - count : 0,
-            reset: Math.floor((oldest + duration * 1000) / 1000000),
-            total: max,
-          });
-        });
+        .exec((err, result) => (err ? reject(err) : resolve(result)));
     });
+    const count = parseInt(Array.isArray(res[0]) ? res[1][1] : res[1], 10);
+    const oldest = parseInt(Array.isArray(res[0]) ? res[3][1] : res[3], 10);
+
+    return {
+      remaining: count < max ? max - count : 0,
+      reset: Math.floor((oldest + duration * 1000) / 1000000),
+      total: max,
+    };
   }
 }
 
