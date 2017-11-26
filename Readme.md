@@ -20,7 +20,7 @@ $ npm install @destinationstransfers/ratelimiter
 
 ## Example
 
-Example Connect middleware implementation limiting against a `user._id`:
+Example Koa middleware implementation limiting against a `user._id`:
 
 ```js
 const Limiter = require('@destinationstransfers/ratelimiter')
@@ -35,9 +35,9 @@ app.use('*', async (ctx, next) => {
   const limiter = new Limiter({ id, db });
   const limit = await limiter.get();
 
-  res.set("X-RateLimit-Limit", limit.total);
-  res.set("X-RateLimit-Remaining", limit.remaining - 1);
-  res.set("X-RateLimit-Reset", limit.reset);
+  ctx.set("X-RateLimit-Limit", limit.total);
+  ctx.set("X-RateLimit-Remaining", limit.remaining - 1);
+  ctx.set("X-RateLimit-Reset", limit.reset);
 
   // all good
   debug("remaining %s/%s %s", limit.remaining - 1, limit.total, id);
@@ -46,8 +46,8 @@ app.use('*', async (ctx, next) => {
   // not good
   const delta = (limit.reset * 1000 - Date.now()) | 0;
   const after = (limit.reset - Date.now() / 1000) | 0;
-  res.set("Retry-After", after);
-  res.send(429, "Rate limit exceeded, retry in " + ms(delta, { long: true }));
+  ctx.set("Retry-After", after);
+  ctx.throw(429, "Rate limit exceeded, retry in " + ms(delta, { long: true }));
 })
 ```
 
