@@ -1,7 +1,7 @@
 {
   "name": "ratelimiter",
-  "version": "3.0.3",
-  "repository": "visionmedia/node-ratelimiter",
+  "version": "3.1.0",
+  "repository": "destinationstransfers/ratelimiter",
   "description": "abstract rate limiter backed by redis",
   "keywords": [
     "rate",
@@ -10,18 +10,52 @@
     "limit"
   ],
   "scripts": {
-    "test": "mocha"
+    "test": "jest --forceExit"
   },
+  "engines": {
+    "node": ">=8"
+  },
+  "files": [
+    "index.js",
+    "microtime.js"
+  ],
   "dependencies": {},
   "devDependencies": {
-    "async": "2.1.4",
+    "@destinationstransfers/eslint-config": "^1.5.0",
+    "eslint": "^4.12.0",
     "ioredis": "1.15.1",
-    "mocha": "*",
+    "jest": "^21.2.1",
     "redis": "2.6.0-1",
-    "should": "*"
+    "remark-cli": "^4.0.0",
+    "remark-preset-lint-consistent": "^2.0.1",
+    "remark-preset-lint-recommended": "^3.0.1"
   },
   "license": "MIT",
-  "contributors": [
-    "Francois-Guillaume Ribreau <npm@fgribreau.com>"
-  ]
+  "remarkConfig": {
+    "presets": [
+      "lint-recommended",
+      "lint-consistent"
+    ]
+  },
+  "jest": {
+    "collectCoverage": true,
+    "testEnvironment": "node",
+    "verbose": true,
+    "bail": true
+  },
+  "eslintConfig": {
+    "plugins": [
+      "node"
+    ],
+    "extends": [
+      "@destinationstransfers",
+      "plugin:node/recommended"
+    ],
+    "env": {
+      "node": true
+    },
+    "parserOptions": {
+      "sourceType": "script"
+    }
+  }
 }
