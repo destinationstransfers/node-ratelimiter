@@ -34,7 +34,7 @@ const limiter = new Limiter({ db });
 
 ...
 
-app.use('*', async (ctx, next) => {
+router.all('*', async (ctx, next) => {
   const limit = await limiter.get(ctx.session.user._id || ctx.ip);
 
   ctx.set("X-RateLimit-Limit", limit.total);
