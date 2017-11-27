@@ -18,10 +18,13 @@ const microtime = require('./microtime');
  * @api public
  */
 class Limiter {
-  constructor({ db, max = 2500, duration = 3600000 }) {
+  constructor({ db, max = 2500, duration = 3600000 } = {}) {
     /** @type {RedisClient} */
     this.db = db;
-    assert(this.db, '.db required');
+    assert(
+      this.db,
+      'Constructor must be called with { db } where db property is a RedisClient instance',
+    );
     this.max = max;
     this.duration = duration;
   }
@@ -44,7 +47,7 @@ class Limiter {
     const now = microtime.now();
     const start = now - duration * 1000;
 
-    const res = await new Promise((resolve, reject) => {
+    const [, count, , oldest] = await new Promise((resolve, reject) => {
       db
         .multi()
         .zremrangebyscore([key, 0, start])
@@ -52,10 +55,19 @@ class Limiter {
         .zadd([key, now, now])
         .zrange([key, 0, 0])
         .pexpire([key, duration])
-        .exec((err, result) => (err ? reject(err) : resolve(result)));
+        .exec(
+          (err, result) =>
+            err
+              ? reject(err)
+              : resolve(
+                  // unwrapping and parsing result
+                  (Array.isArray(result[0])
+                    ? result.map(v => v[1])
+                    : result
+                  ).map(v => parseInt(v, 10)),
+                ),
+        );
     });
-    const count = parseInt(Array.isArray(res[0]) ? res[1][1] : res[1], 10);
-    const oldest = parseInt(Array.isArray(res[0]) ? res[3][1] : res[3], 10);
 
     return {
       remaining: count < max ? max - count : 0,
