@@ -1,5 +1,7 @@
 'use strict';
 
+const { AssertionError } = require('assert');
+
 /* eslint-env node, jest */
 
 const Limiter = require('..');
@@ -12,10 +14,63 @@ process.on('unhandledRejection', up => {
   throw up;
 });
 
-[
-  /* eslint-disable import/no-dynamic-require, global-require, max-nested-callbacks */
-  ('redis', 'ioredis'),
-].forEach(redisModuleName => {
+describe('Limiter class', () => {
+  test('must thrown on bad constructor call', () => {
+    expect(() => new Limiter()).toThrow(AssertionError);
+  });
+
+  test('must thrown on bad `get` call', async () => {
+    const limiter = new Limiter({ db: {} });
+    await expect(limiter.get()).rejects.toBeInstanceOf(AssertionError);
+  });
+
+  test('expect to throw on redis errors', async () => {
+    const zremrangebyscore = jest.fn().mockReturnThis();
+    const zcard = jest.fn().mockReturnThis();
+    const zadd = jest.fn().mockReturnThis();
+    const zrange = jest.fn().mockReturnThis();
+    const pexpire = jest.fn().mockReturnThis();
+    const exec = jest.fn(cb => cb(new Error('A test error!'), null));
+    const db = {
+      multi() {
+        return {
+          zremrangebyscore,
+          zcard,
+          zadd,
+          zrange,
+          pexpire,
+          exec,
+        };
+      },
+    };
+    const limiter = new Limiter({ db, duration: 4000, max: 1000 });
+    await expect(limiter.get('something')).rejects.toEqual(
+      new Error('A test error!'),
+    );
+    expect(zremrangebyscore).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.any(String), 0, expect.any(Number)]),
+    );
+    expect(zcard).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.any(String)]),
+    );
+    expect(zadd).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.any(String),
+        expect.any(Number),
+        expect.any(Number),
+      ]),
+    );
+    expect(zrange).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.any(String), 0, 0]),
+    );
+    expect(pexpire).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.any(String), 4000]),
+    );
+  });
+});
+
+/* eslint-disable import/no-dynamic-require, global-require, max-nested-callbacks */
+['redis', 'ioredis'].forEach(redisModuleName => {
   const db = require(redisModuleName).createClient();
   const redisModule = require(redisModuleName);
 
