@@ -67,6 +67,36 @@ describe('Limiter class', () => {
       expect.arrayContaining([expect.any(String), 4000]),
     );
   });
+
+  test('expect to return an object with correct properties', async () => {
+    const zremrangebyscore = jest.fn().mockReturnThis();
+    const zcard = jest.fn().mockReturnThis();
+    const zadd = jest.fn().mockReturnThis();
+    const zrange = jest.fn().mockReturnThis();
+    const pexpire = jest.fn().mockReturnThis();
+    const exec = jest.fn(cb => cb(null, [0, 0, 0, 0]));
+    const db = {
+      multi() {
+        return {
+          zremrangebyscore,
+          zcard,
+          zadd,
+          zrange,
+          pexpire,
+          exec,
+        };
+      },
+    };
+    const limiter = new Limiter({ db, duration: 4000, max: 1000 });
+    const res = await limiter.get('something');
+    expect(res).toEqual(
+      expect.objectContaining({
+        remaining: 1000,
+        reset: 4,
+        total: 1000,
+      }),
+    );
+  });
 });
 
 /* eslint-disable import/no-dynamic-require, global-require, max-nested-callbacks */
