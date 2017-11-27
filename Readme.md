@@ -1,6 +1,6 @@
 # ratelimiter
 
-Rate limiter for Node.js backed by Redis.
+Rate limiter for Node.js backed by Redis. Based on [ratelimiter by TJ](https://github.com/tj/node-ratelimiter), refactored into ES6 till perfection and 100% covered with tests.
 
 [![Build Status](https://travis-ci.org/destinationstransfers/ratelimiter.svg)](https://travis-ci.org/destinationstransfers/ratelimiter)
 [![codecov](https://codecov.io/gh/destinationstransfers/ratelimiter/branch/master/graph/badge.svg)](https://codecov.io/gh/destinationstransfers/ratelimiter)
