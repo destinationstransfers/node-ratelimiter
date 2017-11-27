@@ -1,6 +1,6 @@
 {
   "name": "@destinationstransfers/ratelimiter",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/destinationstransfers/ratelimiter.git"
@@ -10,7 +10,12 @@
   },
   "homepage": "https://github.com/destinationstransfers/ratelimiter#readme",
   "description": "abstract rate limiter backed by redis",
-  "keywords": ["rate", "ratelimit", "limiter", "limit"],
+  "keywords": [
+    "rate",
+    "ratelimit",
+    "limiter",
+    "limit"
+  ],
   "scripts": {
     "test": "jest --forceExit"
   },
@@ -18,7 +23,10 @@
     "node": ">=8"
   },
   "author": "Tino Vyatkin <tino@vtkn.io>",
-  "files": ["index.js", "microtime.js"],
+  "files": [
+    "index.js",
+    "microtime.js"
+  ],
   "main": "index.js",
   "dependencies": {},
   "devDependencies": {
@@ -33,7 +41,10 @@
   },
   "license": "MIT",
   "remarkConfig": {
-    "presets": ["lint-recommended", "lint-consistent"]
+    "presets": [
+      "lint-recommended",
+      "lint-consistent"
+    ]
   },
   "jest": {
     "collectCoverage": true,
@@ -42,8 +53,13 @@
     "bail": true
   },
   "eslintConfig": {
-    "plugins": ["node"],
-    "extends": ["@destinationstransfers", "plugin:node/recommended"],
+    "plugins": [
+      "node"
+    ],
+    "extends": [
+      "@destinationstransfers",
+      "plugin:node/recommended"
+    ],
     "env": {
       "node": true
     },

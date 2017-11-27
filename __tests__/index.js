@@ -1,5 +1,7 @@
 'use strict';
 
+const { AssertionError } = require('assert');
+
 /* eslint-env node, jest */
 
 const Limiter = require('..');
@@ -12,10 +14,93 @@ process.on('unhandledRejection', up => {
   throw up;
 });
 
-[
-  /* eslint-disable import/no-dynamic-require, global-require, max-nested-callbacks */
-  ('redis', 'ioredis'),
-].forEach(redisModuleName => {
+describe('Limiter class', () => {
+  test('must thrown on bad constructor call', () => {
+    expect(() => new Limiter()).toThrow(AssertionError);
+  });
+
+  test('must thrown on bad `get` call', async () => {
+    const limiter = new Limiter({ db: {} });
+    await expect(limiter.get()).rejects.toBeInstanceOf(AssertionError);
+  });
+
+  test('expect to throw on redis errors', async () => {
+    const zremrangebyscore = jest.fn().mockReturnThis();
+    const zcard = jest.fn().mockReturnThis();
+    const zadd = jest.fn().mockReturnThis();
+    const zrange = jest.fn().mockReturnThis();
+    const pexpire = jest.fn().mockReturnThis();
+    const exec = jest.fn(cb => cb(new Error('A test error!'), null));
+    const db = {
+      multi() {
+        return {
+          zremrangebyscore,
+          zcard,
+          zadd,
+          zrange,
+          pexpire,
+          exec,
+        };
+      },
+    };
+    const limiter = new Limiter({ db, duration: 4000, max: 1000 });
+    await expect(limiter.get('something')).rejects.toEqual(
+      new Error('A test error!'),
+    );
+    expect(zremrangebyscore).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.any(String), 0, expect.any(Number)]),
+    );
+    expect(zcard).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.any(String)]),
+    );
+    expect(zadd).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.any(String),
+        expect.any(Number),
+        expect.any(Number),
+      ]),
+    );
+    expect(zrange).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.any(String), 0, 0]),
+    );
+    expect(pexpire).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.any(String), 4000]),
+    );
+  });
+
+  test('expect to return an object with correct properties', async () => {
+    const zremrangebyscore = jest.fn().mockReturnThis();
+    const zcard = jest.fn().mockReturnThis();
+    const zadd = jest.fn().mockReturnThis();
+    const zrange = jest.fn().mockReturnThis();
+    const pexpire = jest.fn().mockReturnThis();
+    const exec = jest.fn(cb => cb(null, [0, 0, 0, 0]));
+    const db = {
+      multi() {
+        return {
+          zremrangebyscore,
+          zcard,
+          zadd,
+          zrange,
+          pexpire,
+          exec,
+        };
+      },
+    };
+    const limiter = new Limiter({ db, duration: 4000, max: 1000 });
+    const res = await limiter.get('something');
+    expect(res).toEqual(
+      expect.objectContaining({
+        remaining: 1000,
+        reset: 4,
+        total: 1000,
+      }),
+    );
+  });
+});
+
+/* eslint-disable import/no-dynamic-require, global-require, max-nested-callbacks */
+['redis', 'ioredis'].forEach(redisModuleName => {
   const db = require(redisModuleName).createClient();
   const redisModule = require(redisModuleName);
 
@@ -34,11 +119,10 @@ process.on('unhandledRejection', up => {
       it('should represent the total limit per reset period', async () => {
         const limit = new Limiter({
           max: 5,
-          id: 'something',
           db,
         });
 
-        const res = await limit.get();
+        const res = await limit.get('something');
         expect(res).toHaveProperty('total', 5);
       });
     });
@@ -48,17 +132,16 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           max: 5,
           duration: 100000,
-          id: 'something',
           db,
         });
 
-        let res = await limit.get();
+        let res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 5);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 4);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 3);
       });
     });
@@ -68,11 +151,10 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           max: 5,
           duration: 60000,
-          id: 'something',
           db,
         });
 
-        const res = await limit.get();
+        const res = await limit.get('something');
         const left = res.reset - Date.now() / 1000;
         expect(left).toBeLessThan(60);
         expect(left).toBeGreaterThan(0);
@@ -83,20 +165,19 @@ process.on('unhandledRejection', up => {
       it('should retain .remaining at 0', async () => {
         const limit = new Limiter({
           max: 2,
-          id: 'something',
           db,
         });
 
-        let res = await limit.get();
+        let res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 2);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 1);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 0);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 0);
       });
     });
@@ -106,17 +187,16 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           duration: 2000,
           max: 2,
-          id: 'something',
           db,
         });
 
-        let res = await limit.get();
+        let res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 2);
 
         // waiting 3000 ms
         await new Promise(resolve => setTimeout(resolve, 3000));
         // calling again
-        res = await limit.get();
+        res = await limit.get('something');
         const left = res.reset - Date.now() / 1000;
         expect(left).toBeLessThan(2);
         expect(res).toHaveProperty('remaining', 2);
@@ -128,14 +208,13 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           duration: 10000,
           max: 2,
-          id: 'something',
           db,
         });
 
-        let res = await limit.get();
+        let res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 2);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 1);
       });
 
@@ -143,11 +222,10 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           duration: 10000,
           max: 2,
-          id: 'something',
           db,
         });
 
-        await limit.get();
+        await limit.get('something');
 
         const res = await new Promise((resolve, reject) =>
           db
@@ -173,7 +251,6 @@ process.on('unhandledRejection', up => {
         const limit = new Limiter({
           duration: 10000,
           max: 2,
-          id: 'something',
           db,
         });
 
@@ -188,13 +265,13 @@ process.on('unhandledRejection', up => {
             },
           ),
         );
-        let res = await limit.get();
+        let res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 2);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 1);
 
-        res = await limit.get();
+        res = await limit.get('something');
         expect(res).toHaveProperty('remaining', 0);
       });
     });
@@ -210,7 +287,6 @@ process.on('unhandledRejection', up => {
           new Limiter({
             duration: 10000,
             max,
-            id: 'something',
             db: redisModule.createClient(),
           }),
         );
@@ -218,11 +294,13 @@ process.on('unhandledRejection', up => {
 
       it('should prevent race condition and properly set the expected value', async () => {
         // Warm up and prepare the data.
-        const res0 = await limits[0].get();
+        const res0 = await limits[0].get('something');
         expect(res0).toHaveProperty('remaining', left--);
 
         // Simulate multiple concurrent requests.
-        const responses = await Promise.all(limits.map(limit => limit.get()));
+        const responses = await Promise.all(
+          limits.map(limit => limit.get('something')),
+        );
 
         expect(responses).toHaveLength(clientsCount);
         // If there were any errors, report.
@@ -244,17 +322,16 @@ process.on('unhandledRejection', up => {
       const limiter = new Limiter({
         duration: 10000,
         max,
-        id: 'asyncsomething',
         db: redisModule.createClient(),
       });
 
       it('should set the count properly without race conditions', async () => {
         const limits = await Promise.all([
-          limiter.get(),
-          limiter.get(),
-          limiter.get(),
-          limiter.get(),
-          limiter.get(),
+          limiter.get('asyncsomething'),
+          limiter.get('asyncsomething'),
+          limiter.get('asyncsomething'),
+          limiter.get('asyncsomething'),
+          limiter.get('asyncsomething'),
         ]);
 
         limits.forEach(l => expect(l).toHaveProperty('remaining', max--));

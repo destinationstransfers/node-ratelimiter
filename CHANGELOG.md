@@ -1,5 +1,10 @@
 # ratelimiter Change Log.
 
+## 4.0.0 / 2017-11-26
+
+* [BREAKING] `id` is now parameter at `.get` call for better performance
+* Increased test coverage to 100%
+
 ## 3.1.0 / 2017-11-26
 
 ==================

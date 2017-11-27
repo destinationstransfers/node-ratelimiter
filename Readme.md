@@ -3,6 +3,7 @@
 Rate limiter for Node.js backed by Redis.
 
 [![Build Status](https://travis-ci.org/destinationstransfers/ratelimiter.svg)](https://travis-ci.org/destinationstransfers/ratelimiter)
+[![codecov](https://codecov.io/gh/destinationstransfers/ratelimiter/branch/master/graph/badge.svg)](https://codecov.io/gh/destinationstransfers/ratelimiter)
 
 ## Release Notes
 
@@ -28,12 +29,13 @@ const ms = require('ms');
 const redis = require('redis');
 const db = redis.createClient(...);
 
+const limiter = new Limiter({ db });
+
+
 ...
 
 app.use('*', async (ctx, next) => {
-  const id = req.user._id;
-  const limiter = new Limiter({ id, db });
-  const limit = await limiter.get();
+  const limit = await limiter.get(req.user._id);
 
   ctx.set("X-RateLimit-Limit", limit.total);
   ctx.set("X-RateLimit-Remaining", limit.remaining - 1);
@@ -60,10 +62,15 @@ app.use('*', async (ctx, next) => {
 
 ## Options
 
-* `id` - the identifier to limit against (typically a user id)
+Constructor parameters:
+
 * `db` - redis connection instance
 * `max` - max requests within `duration` [2500]
 * `duration` - of limit in milliseconds [3600000]
+
+`.get` parameter:
+
+* `id` - the identifier to limit against (typically a user id or IP, or token)
 
 # License
 

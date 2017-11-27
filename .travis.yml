@@ -12,3 +12,4 @@ install:
 script:
   - node node_modules/.bin/jest --coverage --bail --noStackTrace --maxWorkers=1 --forceExit
 
+after_success: bash <(curl -s https://codecov.io/bash)
