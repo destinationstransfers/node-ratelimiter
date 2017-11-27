@@ -70,7 +70,7 @@ class Limiter {
     });
 
     return {
-      remaining: count < max ? max - count : 0,
+      remaining: Math.max(max - count, 0),
       reset: Math.floor((oldest + duration * 1000) / 1000000),
       total: max,
     };
