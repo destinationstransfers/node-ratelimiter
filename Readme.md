@@ -3,6 +3,7 @@
 Rate limiter for Node.js backed by Redis.
 
 [![Build Status](https://travis-ci.org/destinationstransfers/ratelimiter.svg)](https://travis-ci.org/destinationstransfers/ratelimiter)
+[![codecov](https://codecov.io/gh/destinationstransfers/ratelimiter/branch/master/graph/badge.svg)](https://codecov.io/gh/destinationstransfers/ratelimiter)
 
 ## Release Notes
 
