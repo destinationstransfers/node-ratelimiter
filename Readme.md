@@ -35,7 +35,7 @@ const limiter = new Limiter({ db });
 ...
 
 app.use('*', async (ctx, next) => {
-  const limit = await limiter.get(req.user._id);
+  const limit = await limiter.get(ctx.session.user._id || ctx.ip);
 
   ctx.set("X-RateLimit-Limit", limit.total);
   ctx.set("X-RateLimit-Remaining", limit.remaining - 1);
